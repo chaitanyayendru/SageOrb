@@ -4,23 +4,63 @@ services:
   backend:
     build:
       context: ./backend
-    container_name: liquidity-optimization-backend
+      dockerfile: Dockerfile
+    container_name: sageorb-backend
     ports:
       - "5000:5000"
     environment:
       - FLASK_ENV=development
+      - DATABASE_URL=postgresql://postgres:password@postgres:5432/sageorb
+      - REDIS_URL=redis://redis:6379/0
+      - SECRET_KEY=your-secret-key-change-in-production
+      - DEBUG=true
     volumes:
       - ./backend:/app
+      - ./backend/uploads:/app/uploads
+    depends_on:
+      - postgres
+      - redis
+    restart: unless-stopped
 
   frontend:
     build:
       context: ./frontend
-    container_name: liquidity-optimization-frontend
+      dockerfile: Dockerfile
+    container_name: sageorb-frontend
     ports:
       - "3000:3000"
     environment:
-      - REACT_APP_API_URL=http://backend:5000
+      - REACT_APP_API_URL=http://localhost:5000
+      - REACT_APP_ENVIRONMENT=development
     depends_on:
       - backend
     volumes:
       - ./frontend:/app
+      - /app/node_modules
+    restart: unless-stopped
+
+  postgres:
+    image: postgres:15-alpine
+    container_name: sageorb-postgres
+    environment:
+      - POSTGRES_DB=sageorb
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=password
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    restart: unless-stopped
+
+  redis:
+    image: redis:7-alpine
+    container_name: sageorb-redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    restart: unless-stopped
+
+volumes:
+  postgres_data:
+  redis_data:
